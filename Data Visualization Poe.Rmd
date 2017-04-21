@@ -1,0 +1,99 @@
+---
+title: "Data Visualization three"
+author: "Amber"
+date: "4/21/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+library(dplyr)
+library(tidytext)
+library(ggplot2)
+install.packages("gutenbergr")
+library(gutenbergr)
+EPoe<- gutenberg_download(c(1065, 1064, 1063))
+TheCask <- gutenberg_download(1063)
+TheMasque<- gutenberg_download(1064)
+TheRaven <- gutenberg_download(1065)
+```
+
+
+```{r}
+tidy_Poe <- EPoe %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+tidy_Raven <- TheRaven %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+tidy_Masque <- TheMasque %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+tidy_Cask <- TheCask %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+tidy_Poe %>%
+  count(word, sort = TRUE)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r}
+library(tidyr)
+library(tidyverse)
+library(stringr)
+
+frequency <- bind_rows(mutate(tidy_Masque, title = "Masque"),
+                       mutate(tidy_Raven, title = "Raven"), 
+                       mutate(tidy_Cask, title = "Cask")) %>% 
+  mutate(word = str_extract(word, "[a-z']+")) %>%
+  count(title, word) %>%
+  group_by(title) %>%
+  mutate(proportion = n / sum(n)) %>% 
+  select(-n) %>% 
+  spread(title, proportion) %>% 
+  gather(title, proportion, `Masque`:`Raven`)
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+library(scales)
+
+# expect a warning about rows with missing values being removed
+ggplot(frequency, aes(x = proportion, y = `Cask`, color = abs(`Cask` - proportion))) +
+  geom_abline(color = "gray40", lty = 2) +
+  geom_jitter(alpha = 0.1, size = 2.5, width = 0.3, height = 0.3) +
+  geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) +
+  scale_x_log10(labels = percent_format()) +
+  scale_y_log10(labels = percent_format()) +
+  scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
+  facet_wrap(~title, ncol = 2) +
+  theme(legend.position="none") +
+  labs(y = "Cask", x = NULL)
+```
+
+```{r}
+book_words %>% 
+transform(book_words,
+          gutenberg_id=revalue(gutenberg_id, (c("51292"="NurembergI", "51882"="NurembergII", "54225"="NurembergIII", "54460"="NurembergIV"))))
+
+```
+
+
