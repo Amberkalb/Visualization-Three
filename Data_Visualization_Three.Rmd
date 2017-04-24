@@ -9,10 +9,10 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-### Trial of the Major War Criminals Before the International Military Tribunal
+### Trial of the Major War Criminals Before the International Military Tribunal (IMT)
 #### Nuremberg, 14 November 1945-1 October 1946
 
-Following the unconditional surrender of the Axis powers, on 8 May 1945, the Allies accepted Germany's surrender, and the International Military Tribunal (IMT) was established to try major Nazi war criminals. The proceedings are published spanning 22 volumes of verbadem and translated transcripts in the four languages used in the trials (English, French, Russian, and German). This visualization essay provides a text and sentiment analysis the first four volumes of the "blue series" detailing the official proceedings of the trial of the major war criminals (as opposed to the "green series" detailing the subsequent Nuremberg trials, or the "red series" detailing Nazi conspiracy and aggression). Considering the vague description of the blue series (Volumes I-IV), I performed a distanced reading of the texts through       
+Following the unconditional surrender of the Axis powers, on 8 May 1945, the Allies accepted Germany's surrender, and the International Military Tribunal (IMT) was established to try major Nazi war criminals. The proceedings are published spanning 22 volumes of verbatim and translated transcripts in the four languages used in the trials (English, French, Russian, and German). This visualization essay provides a text and sentiment analysis the first four volumes of the "blue series" (with a focus on Volume I) detailing the official proceedings of the trial of the major war criminals (as opposed to the "green series" detailing the subsequent Nuremberg trials, or the "red series" detailing Nazi conspiracy and aggression). Since I wanted to examine how the subsequent trials on Nazi war crimes were framed, I performed a distanced reading of the first 29 days of proceedings (Volumes I-IV) expecting to find an overwhelming focus on individual perpetrators rather than victims or Nazi organizations.  Below are the results from a TF-IDF (Term Frequency-Inverse Document Frequency) analysis performed on each volume:      
 
 
 ```{r, echo=FALSE, include=FALSE}
@@ -32,9 +32,6 @@ NurembergIII <- gutenberg_download(54225)
 NurembergIV <- gutenberg_download(54460)
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
 
 ```{r, echo=FALSE, include= FALSE}
 tidy_Nuremberg <- Nuremberg %>%
@@ -58,7 +55,6 @@ tidy_NurembergIV <- NurembergIV %>%
   anti_join(stop_words)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
 ```{r, echo = FALSE, include= FALSE}
 book_words <- Nuremberg %>%
@@ -148,7 +144,7 @@ plot_Nuremberg %>%
 ```
 
 
-
+####Words of Importance in Blue Series
 ```{r, echo= FALSE}
 plot_Nuremberg%>% 
   group_by(gutenberg_id) %>% 
@@ -161,9 +157,14 @@ plot_Nuremberg%>%
   facet_wrap(~gutenberg_id, ncol = 2, scales = "free") +
   coord_flip()
 ```
+######Figure One: Words of Importance in Blue Series
 
+While the last two volumes concentrate on criminal activities of individual perpetrators, the first volume largely addresses the Leadership Corps of the Nazi Party, an organization declared criminal by Tribunal. To my surprise, this section of the proceeding dealt with the structure and component parts of the Nazi party, condemning the organization(s) through indictment of individual members.  
 
-###Sentiment Analysis
+This initial focus on the past regime's crimes is not necessarily surprising, but upon close-reading of volume I, the organization is decoupled from the larger German population quite strikingly, "All members of the Leadership Corps were active in getting out the vote and insuring the highest possible proportion of “yes” votes. Ortsgruppenleiters and Political Leaders of higher ranks often collaborated with the Gestapo and SD in taking steps to determine those who refused to vote or who voted “no”, and in taking steps against them which went as far as arrest and detention in a concentration camp...The Leadership Corps was also used to prevent German public opinion from reacting against the measures taken against the Jews in the East." This initial (and superficial) analysis seems partially in agreement with Bernard Geisman's argument "In the narrative of individual criminal guilt, the German people ... take the position of the third party ... . The law court was the institutional arena in which the demarcation of individual guilt was staged, ritually reconstructed,and reaffirmed” (Giesen 2004,p. 121). Rather than individual guilt, however, the organization as a whole is indicated in its criminality. This is likely to act as a cleansing process to make way for a democratic society dependent on accountability through the rule of law (Savelsberg 2007, p.193).
+The nature of the indictments might be further illuminated by performing a sentiment analysis of the first volume.
+
+###Sentiment Analysis of Volume I
 
 ```{r, include= FALSE}
 nrcjoy <- get_sentiments("nrc") %>% 
@@ -195,7 +196,7 @@ Nurembergsentiment <- tidy_Volumes %>%
 
 
 
-```{r, echo= FALSE}
+```{r, echo= FALSE, include= FALSE}
 ggplot(Nurembergsentiment, aes(index, sentiment, fill = gutenberg_id)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~gutenberg_id, ncol = 2, scales = "free_x")
@@ -204,9 +205,47 @@ ggplot(Nurembergsentiment, aes(index, sentiment, fill = gutenberg_id)) +
 
 
 
+```{r, include= FALSE}
+bing_word_countsI <- tidy_NurembergI %>%
+  inner_join(get_sentiments("bing")) %>%
+  dplyr::count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+
+  custom_stop_words <- bind_rows(data_frame(word = c("like"), 
+                                          lexicon = c("custom")), 
+                               stop_words)
+
+bing_word_countsI
+```
 
 
+```{r, echo= FALSE}
+bing_word_countsI %>%
+  group_by(sentiment) %>%
+  top_n(10) %>%
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(y = "Contribution to sentiment",
+       x = NULL) +
+  coord_flip()
+```
 
+###### Figure Two: Word counts that contribute to each sentiment in volume I of the blue series.
 
+The sentiment in volume I of the blue series is overwhelmingly negative and the most popular negatively associated words in the volume use legal language whose default logic is largely individualizing in nature (i.e. "criminal", "guilty" as applied to the defendant). Upon further inspection of the document, volume I uses the term "attack" to describe amorphous "Nazi Conspirators", while, more notably, "criminal" is used in conjunction to not only individual and group responsibility for criminal activity, but also organization responsibility. 
+
+This finding could be more or less interesting due to the commonly held critique of the Nuremberg Trials to focus almost exclusively on individual perpetrators in the Nazi regime and thus, failing to address issues of collective guilt, possibly perpetuating the "cycles of violence" (Minow 2002).
+
+###Final Remarks
+This text analysis of the blue series of the Trial of the Major War Criminals would be further strengthen (and possibly more interesting) by performing a pairwise correlation and visualization summarizing the strength of relationship between often individualizing legal indictments, such as "criminal" and "guilty", and the nature of "Nazi Conspirators" (whether they be individuals, groups or organizations). Another, more in depth, analysis might provide insight to the entire corpus as well. 
+
+####Works Referenced
+Giesen B. 2004. The trauma of perpetrators: the Holocaust as the traumatic reference of
+German national identity. See Alexander et al. 2004, pp. 112–54
+
+Minow M. 2002. Breaking the Cycles of Hatred: Memory, Law, and Repair, ed. NL Rosenblum. Princeton, NJ: Princeton Univ. Press
 
 
