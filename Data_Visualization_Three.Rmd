@@ -1,0 +1,195 @@
+---
+title: "Data Visualization Three"
+author: "Amber Kalb"
+date: "4/24/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+library(dplyr)
+library(tidytext)
+library(ggplot2)
+install.packages("gutenbergr", repos="http://cran.rstudio.com/")
+library(gutenbergr)
+library(stringr)
+library(tidyverse)
+
+Nuremberg<- gutenberg_download (c(54225,51292,51882,54460))
+
+NurembergI <- gutenberg_download(51292)
+NurembergII <- gutenberg_download(51882)
+NurembergIII <- gutenberg_download(54225)
+NurembergIV <- gutenberg_download(54460)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r}
+tidy_Nuremberg <- Nuremberg %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+tidy_NurembergI <- NurembergI %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+tidy_NurembergII <- NurembergII %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+tidy_NurembergIII <- NurembergIII %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+tidy_NurembergIV <- NurembergIV %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+book_words <- Nuremberg %>%
+  unnest_tokens(word, text) %>%
+  count(gutenberg_id, word, sort = TRUE) %>%
+  ungroup()
+
+total_words <- book_words %>% 
+  group_by(gutenberg_id) %>% 
+  summarize(total = sum(n))
+
+book_words <- left_join(book_words, total_words)
+book_words$gutenberg_id <- as.factor(book_words$gutenberg_id)
+
+book_words<- transform(book_words, word=gsub("\\s[0-9()]","", word))
+
+```
+
+
+
+```{r}
+
+library(plyr)
+book_words<- book_words %>% 
+transform(book_words,
+          gutenberg_id=revalue(gutenberg_id, (c("51292"="NurembergI", "51882"="NurembergII", "54225"="NurembergIII", "54460"="NurembergIV"))))
+
+book_words <- book_words %>%
+  bind_tf_idf(word, gutenberg_id, n)
+book_words
+```
+
+
+
+```{r}
+clean_bookwords<- book_words %>%
+  transform(word=gsub("_","", word)) %>% 
+  select(-total) %>%
+  arrange(desc(tf_idf))
+
+Clean_String <- function(clean_bookwords){
+    # Lowercase
+    temp <- tolower(string)
+    #' Remove everything that is not a number or letter (may want to keep more 
+    #' stuff in your actual analyses). 
+    temp <- stringr::str_replace_all(temp,"[^a-zA-Z\\s]", " ")
+    # Shrink down to just one white space
+    temp <- stringr::str_replace_all(temp,"[\\s]+", " ")
+    # Split it
+    temp <- stringr::str_split(temp, " ")[[1]]
+    # Get rid of trailing "" if necessary
+    indexes <- which(temp == "")
+    if(length(indexes) > 0){
+      temp <- temp[-indexes]
+    } 
+    return(temp)
+}
+
+Clean_Text_Block <- function(clean_bookwords)
+    if(length(text) <= 1)
+        # Check to see if there is any text at all with another conditional
+        if(length(text) == 0){
+            cat("There was no text in this document! \n")
+            to_return <- list(num_tokens = 0, unique_tokens = 0, text = "")
+        }else{
+            # If there is , and only only one line of text then tokenize it
+            clean_text <- Clean_String(text)
+            num_tok <- length(clean_text)
+            num_uniq <- length(unique(clean_text))
+            to_return <- list(num_tokens = num_tok, unique_tokens = num_uniq, text = clean_text)
+        }
+```
+
+
+```{r}
+plot_Nuremberg%>% 
+  group_by(gutenberg_id) %>% 
+  arrange(desc(tf_idf)) %>% 
+  top_n(10, tf_idf) %>% 
+  ungroup %>%
+  ggplot(aes(word, tf_idf, fill = gutenberg_id)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = NULL, y = "Important Words (tf-idf)") +
+  facet_wrap(~gutenberg_id, ncol = 2, scales = "free") +
+  coord_flip()
+```
+
+
+###Sentiment Analysis
+
+```{r}
+nrcjoy <- get_sentiments("nrc") %>% 
+  filter(sentiment == "joy")
+
+clean_bookwords %>%
+  inner_join(nrcjoy)
+```
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(stringr)
+
+tidy_Volumes <- Nuremberg %>%
+  group_by(gutenberg_id) %>%
+  mutate(linenumber = row_number(),
+         chapter = cumsum(str_detect(text, regex("^Morning Session [\\divxlc]", 
+                                                 ignore_case = TRUE)))) %>%
+  ungroup() %>%
+  unnest_tokens(word, text)
+
+Nurembergsentiment <- tidy_Volumes %>%
+  inner_join(get_sentiments("bing")) %>%
+  dplyr::count(gutenberg_id, index = linenumber %/% 80, sentiment) %>%
+  spread(sentiment, n, fill = 0) %>%
+  mutate(sentiment = positive - negative) 
+```
+
+
+```{r}
+ggplot(Nurembergsentiment, aes(index, sentiment, fill = gutenberg_id)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~gutenberg_id, ncol = 2, scales = "free_x")
+
+```
+
+
+
+
+
+
+
+
+
