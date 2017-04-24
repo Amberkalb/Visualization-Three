@@ -132,6 +132,22 @@ Clean_Text_Block <- function(clean_bookwords)
         }
 ```
 
+```{r}
+
+plot_Nuremberg <- clean_bookwords %>%
+  arrange(desc(tf_idf)) %>%
+  mutate(word = factor(word, levels = rev(unique(word))))
+
+plot_Nuremberg %>% 
+  top_n(20) %>%
+  ggplot(aes(word, tf_idf, fill = gutenberg_id)) +
+  geom_col() +
+  labs(x = NULL, y = "tf-idf") +
+  coord_flip() 
+  
+```
+
+
 
 ```{r}
 plot_Nuremberg%>% 
@@ -164,7 +180,7 @@ library(stringr)
 
 tidy_Volumes <- Nuremberg %>%
   group_by(gutenberg_id) %>%
-  mutate(linenumber = row_number(),
+  mutate(linenumber = row_number,
          chapter = cumsum(str_detect(text, regex("^Morning Session [\\divxlc]", 
                                                  ignore_case = TRUE)))) %>%
   ungroup() %>%
